@@ -10,8 +10,10 @@ import { Question } from '@/types';
 export default function Home() {
   const [failedCount, setFailedCount] = useState(0);
   const [types, setTypes] = useState<string[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     const failedIds = JSON.parse(localStorage.getItem('failedQuestions') || '[]');
     setFailedCount(failedIds.length);
 
@@ -19,6 +21,10 @@ export default function Home() {
     const uniqueTypes = [...new Set((questionsData as Question[]).map(q => q.Tipo).filter(t => t))];
     setTypes(uniqueTypes);
   }, []);
+
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-slate-50 font-sans">
@@ -86,7 +92,7 @@ export default function Home() {
               <h2 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Practicar por Temario</h2>
             </div>
             
-            <div className="grid grid-cols-1 gap-2 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
+            <div className="grid grid-cols-1 gap-2 max-h-[250px] overflow-y-auto pr-1">
               {types.map((type, idx) => (
                 <Link key={idx} href={`/quiz?type=${encodeURIComponent(type)}`}>
                   <motion.div 
@@ -110,19 +116,6 @@ export default function Home() {
           </p>
         </div>
       </motion.main>
-      
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #e2e8f0;
-          border-radius: 10px;
-        }
-      `}</style>
     </div>
   );
 }
