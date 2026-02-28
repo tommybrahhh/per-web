@@ -6,19 +6,18 @@ import questionsData from '@/data/questions.json';
 import { Question } from '@/types';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, ArrowRight, RotateCcw, Home, HelpCircle, BookOpen, Trophy, AlertCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowRight, RotateCcw, Home, HelpCircle, BookOpen, Trophy, AlertCircle, Sparkles } from 'lucide-react';
+import { getProgress, updateProgress, getQuestionId, MasteryLabels, MasteryColors, MasteryLevel } from '@/lib/progress';
 
 const shuffleArray = <T,>(array: T[]): T[] => {
   return [...array].sort(() => Math.random() - 0.5);
 };
 
-// Unique ID for questions since they don't have one in the JSON
-const getQuestionId = (q: Question) => `${q.Tipo}-${q.Pregunta}`;
-
 function QuizContent() {
   const searchParams = useSearchParams();
   const isReviewMode = searchParams.get('mode') === 'review';
   const isRandom20 = searchParams.get('mode') === 'random20';
+  const isSmartStudy = searchParams.get('mode') === 'smart';
   const selectedType = searchParams.get('type');
   
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -26,25 +25,33 @@ function QuizContent() {
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [score, setScore] = useState(0);
+  const [masteryData, setMasteryData] = useState<Record<string, MasteryLevel>>({});
   const explanationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const progress = getProgress();
+    setMasteryData(progress);
+    
     let allQuestions = (questionsData as Question[]).filter(q => q.Pregunta && q.Respuesta);
     
     if (isReviewMode) {
-      const failedIds = JSON.parse(localStorage.getItem('failedQuestions') || '[]');
-      allQuestions = allQuestions.filter(q => failedIds.includes(getQuestionId(q)));
+      // Repasar solo las que están en nivel 1 (Aprendiendo)
+      allQuestions = allQuestions.filter(q => progress[getQuestionId(q)] === 1);
+    } else if (isSmartStudy) {
+      // Modo Inteligente: mezcla de Nivel 1 (Aprendiendo), Nivel 2 (Repaso) y algunas Nivel 0 (Nuevas)
+      allQuestions = allQuestions.filter(q => (progress[getQuestionId(q)] || 0) < 3);
+      allQuestions = shuffleArray(allQuestions).slice(0, 15);
     } else if (selectedType) {
       allQuestions = allQuestions.filter(q => q.Tipo === selectedType);
     }
 
-    let finalSet = shuffleArray(allQuestions);
+    let finalSet = isSmartStudy ? allQuestions : shuffleArray(allQuestions);
     if (isRandom20) {
       finalSet = finalSet.slice(0, 20);
     }
     
     setQuestions(finalSet);
-  }, [isReviewMode, isRandom20, selectedType]);
+  }, [isReviewMode, isRandom20, isSmartStudy, selectedType]);
 
   // Effect to scroll to explanation/button when it appears
   useEffect(() => {
@@ -75,19 +82,13 @@ function QuizContent() {
     
     const isCorrect = currentOptions[index].isCorrect;
     const currentQId = getQuestionId(questions[currentIndex]);
-    const failedIds = JSON.parse(localStorage.getItem('failedQuestions') || '[]');
+    
+    // Update mastery in library and local state
+    const newLevel = updateProgress(currentQId, isCorrect);
+    setMasteryData(prev => ({ ...prev, [currentQId]: newLevel }));
     
     if (isCorrect) {
       setScore(score + 1);
-      // If correct, remove from failed questions list
-      const newFailedIds = failedIds.filter((id: string) => id !== currentQId);
-      localStorage.setItem('failedQuestions', JSON.stringify(newFailedIds));
-    } else {
-      // If incorrect, add to failed questions list if not already there
-      if (!failedIds.includes(currentQId)) {
-        failedIds.push(currentQId);
-        localStorage.setItem('failedQuestions', JSON.stringify(failedIds));
-      }
     }
     
     setSelectedAnswerIndex(index);
@@ -101,14 +102,16 @@ function QuizContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if ((isReviewMode || selectedType) && questions.length === 0 && currentIndex === 0) return (
+  if (questions.length === 0 && currentIndex === 0) return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 text-center">
-      <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mb-6">
-        <CheckCircle2 className="text-green-600 w-8 h-8" />
+      <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mb-6 text-green-600">
+        <CheckCircle2 size={32} />
       </div>
       <h2 className="text-xl font-bold mb-2">¡Todo al día!</h2>
       <p className="text-slate-500 mb-8 max-w-xs">
-        {isReviewMode ? 'No tienes preguntas pendientes de repasar.' : `No hay preguntas disponibles para: ${selectedType}`}
+        {isReviewMode ? 'No tienes preguntas en nivel "APRENDIENDO". ¡Sigue practicando para descubrir más!' : 
+         isSmartStudy ? '¡Has dominado todo lo disponible! Pronto añadiremos más.' :
+         `No hay preguntas disponibles para: ${selectedType}`}
       </p>
       <Link href="/" className="w-full max-w-xs py-4 bg-blue-600 text-white rounded-xl font-bold text-base hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
         <Home size={18} /> Volver al Inicio
@@ -138,36 +141,28 @@ function QuizContent() {
           {isReviewMode ? '¡Repaso Finalizado!' : '¡Completado!'}
         </h2>
         <p className="text-slate-500 mb-8 font-medium">
-          {isReviewMode ? 'Has repasado tus errores.' : `Has terminado el set de ${isRandom20 ? '20 preguntas' : 'preguntas'}.`}
+          {isReviewMode ? 'Has repasado las preguntas difíciles.' : `Has terminado tu sesión de estudio.`}
         </p>
         <div className="grid grid-cols-2 gap-3 mb-8">
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
             <span className="block text-2xl font-bold text-green-600">{score}</span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Aciertos</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Aciertos</span>
           </div>
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
             <span className="block text-2xl font-bold text-blue-600">{questions.length}</span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase">Total</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</span>
           </div>
         </div>
         <div className="flex flex-col gap-3">
           <button 
             onClick={() => {
               setCurrentIndex(0); setScore(0); setSelectedAnswerIndex(null); setShowExplanation(false);
-              let allQuestions = (questionsData as Question[]).filter(q => q.Pregunta && q.Respuesta);
-              if (isReviewMode) {
-                const failedIds = JSON.parse(localStorage.getItem('failedQuestions') || '[]');
-                allQuestions = allQuestions.filter(q => failedIds.includes(getQuestionId(q)));
-              } else if (selectedType) {
-                allQuestions = allQuestions.filter(q => q.Tipo === selectedType);
-              }
-              let finalSet = shuffleArray(allQuestions);
-              if (isRandom20) finalSet = finalSet.slice(0, 20);
-              setQuestions(finalSet);
+              // Simple refresh logic:
+              window.location.reload();
             }}
             className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-base hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
           >
-            <RotateCcw size={18} /> Reiniciar
+            <RotateCcw size={18} /> Nueva Sesión
           </button>
           <Link href="/" className="w-full py-4 bg-slate-100 text-slate-700 rounded-xl font-bold text-base hover:bg-slate-200 text-center flex items-center justify-center gap-2">
             <Home size={18} /> Inicio
@@ -178,10 +173,13 @@ function QuizContent() {
   );
 
   const currentQuestion = questions[currentIndex];
+  const qId = getQuestionId(currentQuestion);
+  const masteryLevel = masteryData[qId] || 0;
 
   const getModeTitle = () => {
-    if (isReviewMode) return 'MODO REPASO';
+    if (isReviewMode) return 'REPASO ENFOCADO';
     if (isRandom20) return 'PRÁCTICA (20)';
+    if (isSmartStudy) return 'ESTUDIO INTELIGENTE';
     if (selectedType) return selectedType.toUpperCase();
     return 'PRÁCTICA LIBRE';
   };
@@ -195,8 +193,8 @@ function QuizContent() {
               <Home size={20} />
             </Link>
             <div className="w-[1px] h-4 bg-slate-200 mx-1"></div>
-            <div className={`p-2 rounded-lg ${isReviewMode ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
-              {isReviewMode ? <AlertCircle size={18} /> : <BookOpen size={18} />}
+            <div className={`p-2 rounded-lg ${isReviewMode ? 'bg-orange-50 text-orange-600' : isSmartStudy ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
+              {isReviewMode ? <AlertCircle size={18} /> : isSmartStudy ? <Sparkles size={18} /> : <BookOpen size={18} />}
             </div>
           </div>
           
@@ -206,7 +204,7 @@ function QuizContent() {
             </span>
             <div className="flex items-center gap-2">
               <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden max-w-[120px]">
-                <motion.div animate={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }} className={`h-full ${isReviewMode ? 'bg-orange-500' : 'bg-blue-500'}`} />
+                <motion.div animate={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }} className={`h-full ${isReviewMode ? 'bg-orange-500' : isSmartStudy ? 'bg-purple-500' : 'bg-blue-500'}`} />
               </div>
               <span className="text-[11px] font-bold text-slate-700 shrink-0">{currentIndex + 1}/{questions.length}</span>
             </div>
@@ -222,9 +220,15 @@ function QuizContent() {
       <main className="max-w-xl mx-auto px-4 pt-6">
         <AnimatePresence mode="wait">
           <motion.div key={currentIndex} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-            <div className="mb-4 inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold uppercase tracking-wider border border-blue-100">
-              <HelpCircle size={10} />
-              {currentQuestion.Tipo || 'General'}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold uppercase tracking-wider border border-blue-100">
+                <HelpCircle size={10} />
+                {currentQuestion.Tipo || 'General'}
+              </div>
+              
+              <div className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider ${MasteryColors[masteryLevel]}`}>
+                {MasteryLabels[masteryLevel]}
+              </div>
             </div>
             
             <h2 className="text-xl sm:text-2xl font-bold mb-6 text-slate-900 leading-tight tracking-tight">
@@ -293,7 +297,7 @@ function QuizContent() {
                       </div>
                     </div>
                     
-                    <p className="text-slate-800 leading-relaxed text-sm font-semibold mb-2 italic">
+                    <p className="text-slate-800 leading-relaxed text-sm font-semibold mb-2">
                       {currentQuestion.Explicacion || "Respuesta verificada según el reglamento oficial."}
                     </p>
                     
