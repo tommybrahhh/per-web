@@ -73,7 +73,6 @@ function QuizContent() {
     return shuffleArray(allOptions);
   }, [questions, currentIndex]);
 
-  // Detector de señales visuales para la pregunta actual
   const visualAid = useMemo(() => {
     if (!questions[currentIndex]) return null;
     const q = questions[currentIndex];
@@ -168,17 +167,17 @@ function QuizContent() {
               {isFlashcardMode ? <Sparkles size={18} /> : <BookOpen size={18} />}
             </div>
           </div>
-          <div className="flex-1 px-4 overflow-hidden text-center">
-            <span className="block text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">{getModeTitle()}</span>
+          <div className="flex-1 px-2 sm:px-4 overflow-hidden text-center">
+            <span className="block text-[8px] sm:text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mb-1 truncate">{getModeTitle()}</span>
             <div className="flex items-center gap-2 justify-center">
-              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden max-w-[120px]">
+              <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden max-w-[80px] sm:max-w-[120px]">
                 <motion.div animate={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }} className={`h-full ${isFlashcardMode ? 'bg-amber-500' : 'bg-blue-500'}`} />
               </div>
-              <span className="text-[11px] font-bold text-slate-700">{currentIndex + 1}/{questions.length}</span>
+              <span className="text-[10px] font-bold text-slate-700">{currentIndex + 1}/{questions.length}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 shrink-0">
-            <CheckCircle2 size={14} className="text-green-500" /><span className="text-xs font-bold text-green-700">{score}</span>
+          <div className="flex items-center gap-2 bg-green-50 px-2 sm:px-3 py-1.5 rounded-lg border border-green-100 shrink-0">
+            <CheckCircle2 size={12} className="text-green-500" /><span className="text-[10px] sm:text-xs font-bold text-green-700">{score}</span>
           </div>
         </div>
       </header>
@@ -187,49 +186,53 @@ function QuizContent() {
         <AnimatePresence mode="wait">
           <motion.div key={currentIndex} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
             <div className="flex items-center gap-2 mb-4">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold uppercase tracking-wider border border-blue-100">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border border-blue-100">
                 <HelpCircle size={10} /> {currentQuestion.Tipo || 'General'}
               </div>
-              <div className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wider ${MasteryColors[masteryLevel]}`}>
+              <div className={`inline-flex items-center px-2.5 py-1 rounded-md text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider ${MasteryColors[masteryLevel]}`}>
                 {MasteryLabels[masteryLevel]}
               </div>
             </div>
 
-            <h2 className="text-xl sm:text-2xl font-bold mb-6 text-slate-900 leading-tight tracking-tight">{currentQuestion.Pregunta}</h2>
+            <h2 className="text-lg sm:text-2xl font-bold mb-6 text-slate-900 leading-tight tracking-tight">{currentQuestion.Pregunta}</h2>
 
-            {/* Ayuda Visual (Solo si se detecta señal náutica) */}
             {visualAid && (
-              <NauticalVisualizer 
-                type={visualAid.type as any} 
-                colors={visualAid.colors} 
-                shapes={visualAid.shapes as any} 
-              />
+              <NauticalVisualizer type={visualAid.type as any} colors={visualAid.colors} shapes={visualAid.shapes as any} />
             )}
 
             {isFlashcardMode ? (
-              <div className="relative min-h-[400px] mb-8" style={{ perspective: '1000px' }}>
+              <div className="relative w-full min-h-[350px] sm:min-h-[400px] mb-8" style={{ perspective: '1200px' }}>
                 <motion.div 
                   animate={{ rotateY: isFlipped ? 180 : 0 }}
-                  transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
+                  transition={{ duration: 0.6, type: "spring", stiffness: 200, damping: 25 }}
                   style={{ transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%' }}
                 >
                   {/* FRONT */}
-                  <div className="bg-white p-8 rounded-[2rem] shadow-xl border-2 border-slate-100 min-h-[350px] flex flex-col justify-center items-center text-center" style={{ backfaceVisibility: 'hidden', width: '100%' }}>
-                    <p className="text-slate-500 text-sm mb-6">Piensa la respuesta y gira la carta...</p>
-                    <button onClick={() => setIsFlipped(true)} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-600 transition-colors">
+                  <div className="bg-white p-6 sm:p-10 rounded-[2rem] shadow-xl border-2 border-slate-100 min-h-[350px] flex flex-col justify-center items-center text-center" style={{ backfaceVisibility: 'hidden', width: '100%', position: 'absolute', top: 0, left: 0, height: '100%' }}>
+                    <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-6 text-slate-300">
+                      <HelpCircle size={24} />
+                    </div>
+                    <p className="text-slate-500 text-sm sm:text-base mb-8 max-w-xs leading-relaxed">Lee la pregunta arriba y piensa la respuesta antes de girar la carta.</p>
+                    <button onClick={() => setIsFlipped(true)} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-600 transition-colors shadow-lg active:scale-95">
                       Revelar Respuesta <RotateCcw size={18} />
                     </button>
                   </div>
                   {/* BACK */}
-                  <div className="absolute inset-0 bg-slate-900 p-8 rounded-[2rem] shadow-xl border-2 border-slate-800 min-h-[350px] flex flex-col justify-center items-center text-center text-white" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', width: '100%' }}>
-                    <div className="mb-6">
-                      <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest block mb-2">Respuesta Correcta</span>
-                      <p className="text-xl font-bold text-white mb-4">{currentQuestion.Respuesta}</p>
+                  <div className="bg-slate-900 p-6 sm:p-10 rounded-[2rem] shadow-xl border-2 border-slate-800 min-h-[350px] flex flex-col justify-between items-center text-center text-white" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', width: '100%', height: '100%' }}>
+                    <div className="w-full flex-1 flex flex-col justify-center overflow-y-auto pr-1 custom-scrollbar">
+                      <span className="text-[10px] font-bold text-blue-400 uppercase tracking-[0.2em] block mb-4">Respuesta Correcta</span>
+                      <p className="text-lg sm:text-xl font-bold text-white mb-6 leading-tight">{currentQuestion.Respuesta}</p>
+                      <div className="w-8 h-1 bg-blue-500/30 mx-auto rounded-full mb-6"></div>
+                      <p className="text-slate-400 text-xs sm:text-sm leading-relaxed italic mb-4">{currentQuestion.Explicacion || "Sin explicación adicional."}</p>
                     </div>
-                    <p className="text-slate-300 text-sm leading-relaxed mb-8 italic">{currentQuestion.Explicacion || "Sin explicación adicional."}</p>
-                    <div className="grid grid-cols-2 gap-4 w-full">
-                      <button onClick={() => handleFlashcardResult(false)} className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl font-bold flex flex-col items-center gap-1 hover:bg-red-500/20 transition-all"><XCircle size={20} /><span className="text-xs uppercase">No la sabía</span></button>
-                      <button onClick={() => handleFlashcardResult(true)} className="p-4 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl font-bold flex flex-col items-center gap-1 hover:bg-green-500/20 transition-all"><CheckCircle2 size={20} /><span className="text-xs uppercase">¡La sabía!</span></button>
+                    
+                    <div className="grid grid-cols-2 gap-3 w-full mt-6 pt-6 border-t border-white/5">
+                      <button onClick={() => handleFlashcardResult(false)} className="py-3 px-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl font-bold flex flex-col items-center gap-1 hover:bg-red-500/20 active:scale-95 transition-all text-[10px] sm:text-xs uppercase tracking-wider">
+                        <XCircle size={18} /> No la sabía
+                      </button>
+                      <button onClick={() => handleFlashcardResult(true)} className="py-3 px-2 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl font-bold flex flex-col items-center gap-1 hover:bg-green-500/20 active:scale-95 transition-all text-[10px] sm:text-xs uppercase tracking-wider">
+                        <CheckCircle2 size={18} /> ¡La sabía!
+                      </button>
                     </div>
                   </div>
                 </motion.div>
@@ -244,7 +247,7 @@ function QuizContent() {
                     <button key={idx} onClick={() => handleSelect(idx)} disabled={answered}
                       className={`relative w-full text-left p-4 rounded-xl border-2 transition-all duration-200 flex items-start gap-3 ${!answered ? 'bg-white border-slate-100 active:bg-blue-50' : isCorrect ? 'bg-green-50 border-green-500 text-green-900' : isSelected ? 'bg-red-50 border-red-500 text-red-900' : 'bg-white border-slate-50 opacity-40 grayscale'}`}>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${!answered ? 'bg-slate-100 text-slate-400' : isCorrect ? 'bg-green-500 text-white' : isSelected ? 'bg-red-500 text-white' : 'bg-slate-50 text-slate-300'}`}>{['A', 'B', 'C', 'D'][idx]}</div>
-                      <span className="pt-1 text-base font-semibold leading-snug flex-1">{opt.text}</span>
+                      <span className="pt-1 text-sm sm:text-base font-semibold leading-snug flex-1">{opt.text}</span>
                     </button>
                   );
                 })}
