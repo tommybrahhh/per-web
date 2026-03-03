@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Compass, BookOpen, CheckCircle2, ArrowRight, Anchor, ShieldCheck, AlertCircle, RotateCcw, Sparkles, Trophy } from 'lucide-react';
 import questionsData from '@/data/questions.json';
 import { Question } from '@/types';
-import { getProgress, MasteryLevel } from '@/lib/progress';
+import { getProgress } from '@/lib/progress';
 
 export default function Home() {
   const [stats, setStats] = useState({
@@ -23,8 +23,8 @@ export default function Home() {
     const levels = Object.values(progress);
     
     setStats({
-      learning: levels.filter(l => l === 1).length,
-      mastered: levels.filter(l => l === 3).length,
+      learning: levels.filter(l => l.level > 0 && l.level < 4).length,
+      mastered: levels.filter(l => l.level === 4).length,
       total: questionsData.length
     });
 
@@ -98,6 +98,15 @@ export default function Home() {
                 className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-base hover:shadow-lg hover:shadow-blue-200 transition-all flex items-center justify-center gap-2 cursor-pointer mb-2"
               >
                 <Sparkles size={18} /> Estudio Inteligente
+              </motion.div>
+            </Link>
+
+            <Link href="/quiz?mode=flashcards">
+              <motion.div 
+                whileTap={{ scale: 0.98 }}
+                className="w-full py-4 bg-amber-500 text-white rounded-xl font-bold text-base hover:shadow-lg hover:shadow-amber-200 transition-all flex items-center justify-center gap-2 cursor-pointer mb-2"
+              >
+                <RotateCcw size={18} className="rotate-180" /> Modo Mnemotecnia (Flashcards)
               </motion.div>
             </Link>
 
